@@ -1,10 +1,19 @@
 name: Build and Release
 
+run-name: Build and Release - ${{ github.sha }}
+
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -72,7 +81,7 @@ jobs:
             i3-settings-manager.desktop
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: i3-settings-manager-linux-x64
           path: |
@@ -81,7 +90,7 @@ jobs:
 
       - name: Create Release
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: |
             i3-settings-manager-linux-x64.tar.gz
