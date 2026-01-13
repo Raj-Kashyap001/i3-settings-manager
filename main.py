@@ -14,7 +14,7 @@ from PyQt6.QtWidgets import (
     QTabWidget, QLabel, QPushButton, QSpinBox, QComboBox,
     QLineEdit, QCheckBox, QGroupBox, QScrollArea, QMessageBox,
     QFileDialog, QTableWidget, QTableWidgetItem, QHeaderView,
-    QDialog, QDialogButtonBox, QTextEdit, QListWidget, QStatusBar
+    QDialog, QDialogButtonBox, QTextEdit, QListWidget, QStatusBar,QSpacerItem
 )
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QKeySequence, QColor, QPalette, QIcon, QPixmap
@@ -761,90 +761,52 @@ class KeybindsTab(QWidget):
         if dialog.exec() == QDialog.DialogCode.Accepted:
             line_edit.setText(dialog.result_bind)
 
-
 class DisplayTab(QWidget):
-    """Display configuration tab"""
+    """Display configuration tab with responsive, centered layout"""
 
-    def __init__(self, config_parser):
+    def __init__(self, config_parser=None):
         super().__init__()
         self.config = config_parser
+        self.current_rates = {}
         self.init_ui()
-    
+
     def init_ui(self):
-        layout = QVBoxLayout()
-        
-        # Refresh rate selection
-        refresh_group = QGroupBox("Monitor Refresh Rate")
-        refresh_layout = QVBoxLayout()
-        
-        refresh_info = QLabel("Select your monitor's refresh rate")
-        refresh_layout.addWidget(refresh_info)
-        
-        self.refresh_combo = QComboBox()
-        self.refresh_combo.addItems(["60Hz", "75Hz", "120Hz", "144Hz", "165Hz", "240Hz"])
-        
-        # Try to get current refresh rate
-        current_rate = self.get_current_refresh_rate()
-        if current_rate:
-            index = self.refresh_combo.findText(current_rate)
-            if index >= 0:
-                self.refresh_combo.setCurrentIndex(index)
-        
-        refresh_layout.addWidget(self.refresh_combo)
-        
-        apply_refresh_btn = QPushButton("Apply Refresh Rate")
-        apply_refresh_btn.clicked.connect(self.apply_refresh_rate)
-        refresh_layout.addWidget(apply_refresh_btn)
-        
-        refresh_group.setLayout(refresh_layout)
-        layout.addWidget(refresh_group)
-        
-        layout.addStretch()
-        self.setLayout(layout)
-    
-    def get_current_refresh_rate(self):
-        """Get current refresh rate using xrandr"""
-        try:
-            result = subprocess.run(['xrandr'], capture_output=True, text=True, check=True)
-            # Parse xrandr output to find current refresh rate
-            for line in result.stdout.split('\n'):
-                if ' connected' in line and '*' in line:
-                    parts = line.split()
-                    for part in parts:
-                        if part.endswith('Hz') and '*' in part:
-                            return part.replace('*', '').strip()
-            return None
-        except Exception as e:
-            print(f"Failed to get refresh rate: {e}")
-            return None
-    
+        # Outer layout to center content
+        outer_layout = QVBoxLayout(self)
+        outer_layout.setContentsMargins(0, 0, 0, 0)
+        outer_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+
+        # Container for all content, max width limits stretching
+        self.container = QWidget()
+        self.container_layout = QVBoxLayout(self.container)
+        self.container_layout.setSpacing(20)
+        self.container_layout.setContentsMargins(16, 16, 16, 16)
+
+        outer_layout.addWidget(self.container)
+
+        # Load monitors into container
+        self.load_monitor_info()
+
+    # -------------------- Monitor Info --------------------
     def get_monitor_info(self):
-        """Get detailed monitor information using xrandr"""
+        """Get monitor info using xrandr"""
         monitors = []
         try:
-            # print("DEBUG: Running xrandr command...")
             result = subprocess.run(['xrandr'], capture_output=True, text=True, check=True)
-            # print(f"DEBUG: xrandr stdout: {result.stdout}")
-            # print(f"DEBUG: xrandr stderr: {result.stderr}")
-            
+
             current_output = None
             current_info = {}
             in_resolution_section = False
-            
-            for line in result.stdout.split('\n'):
+
+            for line in result.stdout.splitlines():
                 original_line = line
                 line = line.strip()
-                # print(f"DEBUG: Processing line: '{original_line}' -> '{line}'")
-                
-                # Check if this is an output line
+
+                # Start of monitor output
                 if ' connected' in line or ' disconnected' in line:
-                    # print(f"DEBUG: Found monitor output: {line}")
-                    # Save previous monitor if exists
                     if current_output and current_info:
-                        # print(f"DEBUG: Saving previous monitor: {current_info}")
                         monitors.append(current_info)
-                    
-                    # Start new monitor
+
                     parts = line.split()
                     current_output = parts[0]
                     current_info = {
@@ -858,170 +820,131 @@ class DisplayTab(QWidget):
                         'position': None
                     }
                     in_resolution_section = True
-                    # print(f"DEBUG: Started new monitor: {current_output}, connected: {current_info['connected']}, primary: {current_info['primary']}")
-                
-                # Parse resolutions and rates (only for connected monitors)
+
+                # Parse resolutions for connected monitor
                 elif current_output and current_info['connected'] and in_resolution_section and line and (line[0].isdigit() or ('x' in line and any(c.isdigit() for c in line))):
-                    # print(f"DEBUG: Found resolution line: {line}")
-                    # This is a resolution line like "1920x1080     60.00*+  74.97    50.00    59.94"
                     parts = line.split()
                     if len(parts) >= 2:
                         res = parts[0]
                         current_info['resolutions'].append(res)
-                        # print(f"DEBUG: Added resolution: {res}")
-                        
-                        # Check if this is current resolution (has *)
-                        current_rate = None
-                        for i, part in enumerate(parts[1:]):
+
+                        # Find current rate
+                        for part in parts[1:]:
                             if '*' in part:
                                 current_info['current_resolution'] = res
-                                # Extract current rate (remove * and +)
-                                current_rate = part.replace('*', '').replace('+', '').strip()
-                                current_info['current_rate'] = current_rate
-                                # print(f"DEBUG: Set current resolution: {res} @ {current_rate}Hz")
+                                current_info['current_rate'] = part.replace('*', '').replace('+', '').strip()
                                 break
-                        
-                        # Collect all available rates for this resolution
+
+                        # Collect all rates
                         rates = []
                         for part in parts[1:]:
-                            clean_part = part.replace('*', '').replace('+', '').strip()
-                            if clean_part.replace('.', '').isdigit():
-                                if clean_part not in rates:
-                                    rates.append(clean_part)
+                            clean = part.replace('*', '').replace('+', '').strip()
+                            if clean.replace('.', '').isdigit() and clean not in rates:
+                                rates.append(clean)
                         current_info['refresh_rates'].extend(rates)
-                        # print(f"DEBUG: Available rates: {rates}")
-                
-                # End of resolution section - look for lines that start with spaces but aren't resolution lines
+
+                # End of resolution section
                 elif current_output and original_line.startswith(' ') and not original_line.strip().startswith(('Screen', 'VGA', 'HDMI', 'DP')):
-                    # print(f"DEBUG: End of resolution section (blank line)")
                     in_resolution_section = False
-                
-            # Add the last monitor
+
+            # Add last monitor
             if current_output and current_info:
-                # print(f"DEBUG: Adding final monitor: {current_info}")
                 monitors.append(current_info)
-            else:
-                print("DEBUG: No final monitor to add")
-                
+
         except Exception as e:
-            print(f"DEBUG ERROR: Failed to get monitor info: {e}")
-            import traceback
-            traceback.print_exc()
-        
-        # print(f"DEBUG: Final monitors list: {monitors}")
+            print(f"Failed to get monitor info: {e}")
         return monitors
-    
+
+    # -------------------- Load Monitors --------------------
     def load_monitor_info(self):
-        """Load and display monitor information"""
-        monitors = self.get_monitor_info()
-        
-        # Store current rates for comparison
-        self.current_rates = {}
-        
-        # Clear existing layout
-        for i in reversed(range(self.layout().count())):
-            widget = self.layout().itemAt(i).widget()
+        """Display monitor info in container"""
+        # Clear previous widgets
+        for i in reversed(range(self.container_layout.count())):
+            widget = self.container_layout.itemAt(i).widget()
             if widget:
-                widget.deleteLater()
-        
-        # Add monitor info for each connected monitor
+                widget.setParent(None)
+
+        monitors = self.get_monitor_info()
         for monitor in monitors:
-            if monitor['connected']:
-                monitor_group = QGroupBox(f"Monitor: {monitor['name']}")
-                monitor_layout = QVBoxLayout()
-                
-                # Basic info
-                info_text = f"Resolution: {monitor['current_resolution'] or 'Unknown'} @ {monitor['current_rate'] or 'Unknown'}Hz"
-                if monitor.get('primary'):
-                    info_text += " (Primary)"
-                
-                info_label = QLabel(info_text)
-                monitor_layout.addWidget(info_label)
-                
-                # Refresh rate selection
-                if monitor['refresh_rates']:
-                    rate_layout = QHBoxLayout()
-                    rate_layout.addWidget(QLabel("Refresh Rate:"))
-                    
-                    rate_combo = QComboBox()
-                    # Remove duplicates while preserving order
-                    seen_rates = set()
-                    unique_rates = []
-                    for rate in monitor['refresh_rates']:
-                        if rate not in seen_rates:
-                            seen_rates.add(rate)
-                            unique_rates.append(rate)
-                    rate_combo.addItems(unique_rates)
-                    
-                    # Store current rate for this monitor
-                    current_rate = monitor['current_rate']
-                    self.current_rates[monitor['name']] = current_rate
-                    
-                    if current_rate:
-                        index = rate_combo.findText(current_rate)
-                        if index >= 0:
-                            rate_combo.setCurrentIndex(index)
-                    
-                    rate_layout.addWidget(rate_combo)
-                    monitor_layout.addLayout(rate_layout)
-                    
-                    # Create apply button and connect with change detection
-                    apply_btn = QPushButton("Apply")
-                    apply_btn.setEnabled(False)  # Start disabled
-                    
-                    def on_rate_changed(index):
-                        selected_rate = rate_combo.itemText(index)
-                        apply_btn.setEnabled(selected_rate != current_rate)
-                    
-                    rate_combo.currentIndexChanged.connect(on_rate_changed)
-                    apply_btn.clicked.connect(lambda _, m=monitor['name'], rc=rate_combo: self.apply_monitor_refresh_rate(m, rc))
-                    monitor_layout.addWidget(apply_btn)
-                
-                monitor_group.setLayout(monitor_layout)
-                self.layout().addWidget(monitor_group)
-        
-        # Remove stretch to keep content at top
-        while self.layout().count() > 0:
-            item = self.layout().itemAt(self.layout().count() - 1)
-            if isinstance(item, QSpacerItem):
-                self.layout().takeAt(self.layout().count() - 1)
-            else:
-                break
-    
+            if not monitor['connected']:
+                continue
+
+            monitor_group = QGroupBox(f"Monitor: {monitor['name']}")
+            monitor_layout = QVBoxLayout()
+            monitor_layout.setSpacing(12)
+            monitor_layout.setContentsMargins(12, 12, 12, 12)
+
+            # Info label
+            info_text = f"Resolution: {monitor['current_resolution'] or 'Unknown'} @ {monitor['current_rate'] or 'Unknown'}Hz"
+            if monitor.get('primary'):
+                info_text += " (Primary)"
+            info_label = QLabel(info_text)
+            monitor_layout.addWidget(info_label)
+
+            # Refresh rate selection
+            if monitor['refresh_rates']:
+                rate_layout = QHBoxLayout()
+                rate_layout.setSpacing(8)
+                rate_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
+
+                rate_layout.addWidget(QLabel("Refresh Rate:"))
+                rate_combo = QComboBox()
+
+                # Unique rates
+                seen = set()
+                unique_rates = [r for r in monitor['refresh_rates'] if not (r in seen or seen.add(r))]
+                rate_combo.addItems(unique_rates)
+
+                # Current rate
+                current_rate = monitor['current_rate']
+                self.current_rates[monitor['name']] = current_rate
+                if current_rate:
+                    idx = rate_combo.findText(current_rate)
+                    if idx >= 0:
+                        rate_combo.setCurrentIndex(idx)
+
+                rate_layout.addWidget(rate_combo)
+
+                # Apply button
+                apply_btn = QPushButton("Apply")
+                apply_btn.setEnabled(False)
+
+                # Enable apply only when changed
+                def on_rate_changed(index, combo=rate_combo, btn=apply_btn):
+                    btn.setEnabled(combo.currentText() != current_rate)
+
+                rate_combo.currentIndexChanged.connect(on_rate_changed)
+                apply_btn.clicked.connect(lambda _, m=monitor['name'], rc=rate_combo: self.apply_monitor_refresh_rate(m, rc))
+                monitor_layout.addLayout(rate_layout)
+                monitor_layout.addWidget(apply_btn)
+
+            monitor_group.setLayout(monitor_layout)
+            self.container_layout.addWidget(monitor_group)
+
+    # -------------------- Apply Refresh --------------------
     def apply_monitor_refresh_rate(self, monitor_name, rate_combo):
-        """Apply refresh rate to specific monitor"""
+        """Apply refresh rate"""
         rate = rate_combo.currentText()
         try:
-            # Get current resolution to preserve it
             monitors = self.get_monitor_info()
             monitor_info = next((m for m in monitors if m['name'] == monitor_name and m['connected']), None)
-            
             if not monitor_info or not monitor_info['current_resolution']:
                 send_notification("Error", f"Could not get current resolution for {monitor_name}")
                 return
-            
-            # Apply new refresh rate while keeping current resolution
-            result = subprocess.run(
+
+            subprocess.run(
                 ['xrandr', '--output', monitor_name, '--mode', monitor_info['current_resolution'], '--rate', rate],
                 capture_output=True, text=True, check=True
             )
-            
-            send_notification("Success", f"Set {monitor_name} to {monitor_info['current_resolution']} @ {rate}Hz")
-            
-            # Refresh monitor info
+            send_notification("Success", f"{monitor_name}: {monitor_info['current_resolution']} @ {rate}Hz applied")
+
+            # Refresh UI
             self.load_monitor_info()
-            
         except subprocess.CalledProcessError as e:
             send_notification("Error", f"Failed to set refresh rate: {e.stderr}")
         except Exception as e:
-            send_notification("Error", f"Error setting refresh rate: {str(e)}")
-    
-    def init_ui(self):
-        layout = QVBoxLayout()
-        self.setLayout(layout)
-        
-        # Load monitor information
-        self.load_monitor_info()
+            send_notification("Error", str(e))
+
 
 
 class StartupAppsTab(QWidget):
