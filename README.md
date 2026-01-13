@@ -25,6 +25,14 @@ _Add screenshots here_
 
 ## Installation
 
+### Automated Builds (Recommended)
+
+Pre-built binaries are automatically created for each commit to the main branch:
+
+1. Go to [Releases](https://github.com/Raj-Kashyap001/i3-settings-manager/releases)
+2. Download the latest `i3-settings-manager-linux-x64.tar.gz`
+3. Extract and run: `tar -xzf i3-settings-manager-linux-x64.tar.gz && ./i3-settings-manager`
+
 ### From Source
 
 1. Clone the repository:

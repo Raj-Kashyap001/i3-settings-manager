@@ -1,0 +1,110 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.8"
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            python3-pyqt6 \
+            pyinstaller \
+            upx \
+            imagemagick \
+            libxcb-xinerama0 \
+            libxcb-icccm4 \
+            libxcb-image0 \
+            libxcb-keysyms1 \
+            libxcb-randr0 \
+            libxcb-render-util0 \
+            libxcb-shape0
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Create appicon.png from SVG (if needed)
+        run: |
+          if [ ! -f "appicon.png" ] && [ -f "appicon.svg" ]; then
+            convert appicon.svg -resize 256x256 appicon.png
+          fi
+
+      - name: Build application
+        run: python3 build.py
+
+      - name: Test binary
+        run: |
+          if [ -f "dist/i3-settings-manager" ]; then
+            file dist/i3-settings-manager
+            ls -la dist/i3-settings-manager
+          else
+            echo "Binary not found!"
+            exit 1
+          fi
+
+      - name: Create release archive
+        run: |
+          cp dist/i3-settings-manager .
+          tar -czf i3-settings-manager-linux-x64.tar.gz \
+            i3-settings-manager \
+            icons/ \
+            config.default \
+            README.md \
+            LICENSE.md \
+            i3-settings-manager.desktop
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: i3-settings-manager-linux-x64
+          path: |
+            i3-settings-manager-linux-x64.tar.gz
+            dist/i3-settings-manager
+
+      - name: Create Release
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            i3-settings-manager-linux-x64.tar.gz
+          tag_name: v${{ github.run_number }}
+          name: Release v${{ github.run_number }}
+          body: |
+            Automated build of i3 Settings Manager
+
+            ## Changes
+            - Automated build from commit ${{ github.sha }}
+            - Built on Ubuntu Linux
+            - Includes all dependencies bundled
+
+            ## Installation
+            ```bash
+            tar -xzf i3-settings-manager-linux-x64.tar.gz
+            chmod +x i3-settings-manager
+            ./i3-settings-manager
+            ```
+
+            ## System Requirements
+            - Linux with X11
+            - i3 window manager
+            - feh, matugen, xrdb (for wallpaper features)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

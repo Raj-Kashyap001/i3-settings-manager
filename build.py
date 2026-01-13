@@ -82,9 +82,10 @@ a = Analysis(
     pathex=[project_root],
     binaries=[],
     datas=[
-        ('icons', 'icons'),
+        ('icons', '.'),
         ('config.default', '.'),
         ('appicon.png', '.'),
+        ('i3wm-logo.png', '.'),
     ],
     hiddenimports=[
         'PyQt6.QtCore',
@@ -238,24 +239,31 @@ def install_system_wide():
         # Install binary
         run_command(["sudo", "cp", "dist/i3-settings-manager", "/usr/local/bin/"], "Installing binary")
 
-        # Install icons (only if icons directory exists)
+        # Install icons (only if appicon.png exists)
+        if os.path.exists("appicon.png"):
+            # Install in multiple standard sizes for better compatibility
+            for size in ["16x16", "24x24", "32x32", "48x48", "64x64", "128x128"]:
+                run_command(["sudo", "mkdir", "-p", f"/usr/share/icons/hicolor/{size}/apps"], f"Creating {size} icons directory")
+                run_command(["sudo", "cp", "appicon.png", f"/usr/share/icons/hicolor/{size}/apps/i3-settings-manager.png"], f"Installing {size} desktop icon")
+            print("✓ Desktop icons installed in multiple sizes")
+        else:
+            print("⚠ appicon.png not found, skipping desktop icon installation")
+
+        # Install custom icons (SVG icons for application use)
         if os.path.exists("icons") and os.listdir("icons"):
-            run_command(["sudo", "mkdir", "-p", "/usr/share/icons/hicolor/48x48/apps"], "Creating icons directory")
-            # Copy appicon.png as the main icon if it exists
-            if os.path.exists("appicon.png"):
-                run_command(["sudo", "cp", "appicon.png", "/usr/share/icons/hicolor/48x48/apps/i3-settings-manager.png"], "Installing main icon")
-            # Also install custom icons
             run_command(["sudo", "mkdir", "-p", "/usr/share/icons/i3-settings-manager"], "Creating custom icons directory")
             run_command(["sudo", "cp", "-r", "icons/", "/usr/share/icons/i3-settings-manager/"], "Installing custom icons")
-            print("✓ Icons installed")
+            print("✓ Custom icons installed")
         else:
-            print("⚠ Icons directory not found or empty, skipping icon installation")
+            print("⚠ Icons directory not found or empty, skipping custom icon installation")
 
         # Install desktop file (only if it exists)
         if os.path.exists("i3-settings-manager.desktop"):
             run_command(["sudo", "cp", "i3-settings-manager.desktop", "/usr/share/applications/"], "Installing desktop file")
             # Update desktop database
             run_command(["sudo", "update-desktop-database", "/usr/share/applications/"], "Updating desktop database")
+            # Update icon cache
+            run_command(["sudo", "gtk-update-icon-cache", "-f", "/usr/share/icons/hicolor"], "Updating icon cache")
             print("✓ Desktop integration installed")
         else:
             print("⚠ Desktop file not found, skipping desktop integration")
@@ -280,9 +288,11 @@ def remove_system_installation():
         if os.path.exists("/usr/local/bin/i3-settings-manager"):
             run_command(["sudo", "rm", "/usr/local/bin/i3-settings-manager"], "Removing binary")
 
-        # Remove main icon
-        if os.path.exists("/usr/share/icons/hicolor/48x48/apps/i3-settings-manager.png"):
-            run_command(["sudo", "rm", "/usr/share/icons/hicolor/48x48/apps/i3-settings-manager.png"], "Removing main icon")
+        # Remove desktop icons (all sizes)
+        for size in ["16x16", "24x24", "32x32", "48x48", "64x64", "128x128"]:
+            icon_path = f"/usr/share/icons/hicolor/{size}/apps/i3-settings-manager.png"
+            if os.path.exists(icon_path):
+                run_command(["sudo", "rm", icon_path], f"Removing {size} desktop icon")
 
         # Remove custom icons
         if os.path.exists("/usr/share/icons/i3-settings-manager"):
@@ -355,7 +365,7 @@ Examples:
 
     args = parser.parse_args()
 
-    print("🚀 i3 Settings Manager Build Script")
+    print("  i3 Settings Manager Build Script")
     print("=" * 40)
 
     # Handle removal/clean operations
@@ -418,11 +428,11 @@ Examples:
     create_archive()
 
     print("\n✅ Build completed successfully!")
-    print("\n📦 Distribution files:")
+    print("\n Distribution files:")
     print("  - dist/i3-settings-manager (standalone binary)")
     print("  - i3wm Settings.tar.gz (complete package)")
 
-    print("\n🎯 Installation instructions:")
+    print("\n Installation instructions:")
     print("  1. Extract the tar.gz archive")
     print("  2. Make the binary executable: chmod +x i3-settings-manager")
     print("  3. Copy binary to /usr/local/bin/: sudo cp i3-settings-manager /usr/local/bin/")
@@ -430,7 +440,7 @@ Examples:
     print("  5. Install desktop file: sudo cp i3-settings-manager.desktop /usr/share/applications/")
     print("  6. Run from menu or: i3-settings-manager")
 
-    print("\n📋 System requirements for the binary:")
+    print("\n System requirements for the binary:")
     print("  - i3 window manager")
     print("  - feh, matugen, xrdb, dunst/notify-send")
     print("  - X11 display server")

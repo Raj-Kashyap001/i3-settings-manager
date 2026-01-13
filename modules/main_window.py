@@ -3,6 +3,7 @@ MainWindow module for the main application window
 """
 
 import subprocess
+import sys
 from PyQt6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QTabWidget, QLabel, QPushButton, QCheckBox, QMessageBox, QDialog, QTextEdit, QDialogButtonBox
 from PyQt6.QtGui import QIcon, QPixmap
 from PyQt6.QtCore import Qt
@@ -34,8 +35,20 @@ class MainWindow(QMainWindow):
     def set_window_icon(self):
         """Set application icon"""
         try:
-            icon_path = Path("appicon.png")
-            if icon_path.exists():
+            # Try bundled icon first (for frozen binary)
+            icon_path = None
+            if hasattr(sys, '_MEIPASS'):
+                # Running as PyInstaller bundle
+                bundled_path = Path(sys._MEIPASS) / "appicon.png"
+                if bundled_path.exists():
+                    icon_path = bundled_path
+            else:
+                # Running as script
+                script_path = Path("appicon.png")
+                if script_path.exists():
+                    icon_path = script_path
+
+            if icon_path:
                 icon = QIcon(str(icon_path))
                 self.setWindowIcon(icon)
         except Exception as e:
@@ -55,8 +68,20 @@ class MainWindow(QMainWindow):
         # Add logo
         logo_label = QLabel()
         try:
-            logo_path = Path("i3wm-logo.png")
-            if logo_path.exists():
+            # Try bundled logo first (for frozen binary)
+            logo_path = None
+            if hasattr(sys, '_MEIPASS'):
+                # Running as PyInstaller bundle
+                bundled_path = Path(sys._MEIPASS) / "i3wm-logo.png"
+                if bundled_path.exists():
+                    logo_path = bundled_path
+            else:
+                # Running as script
+                script_path = Path("i3wm-logo.png")
+                if script_path.exists():
+                    logo_path = script_path
+
+            if logo_path:
                 pixmap = QPixmap(str(logo_path))
                 # Scale logo to appropriate size
                 logo_label.setPixmap(pixmap.scaled(48, 48, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
