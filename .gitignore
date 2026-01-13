@@ -1,0 +1,34 @@
+# Build artifacts
+build/
+dist/
+*.spec
+*.tar.gz
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.log
+
+# Distribution files
+i3-settings-manager
+i3-settings-manager.desktop
+
+# User config (don't commit personal configs)
+config.default
