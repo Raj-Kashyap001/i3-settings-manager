@@ -110,11 +110,13 @@ class MainWindow(QMainWindow):
         from modules.startup_apps_tab import StartupAppsTab
         from modules.keybinds_tab import KeybindsTab
         from modules.history_tab import HistoryTab
-        
+        from modules.window_class_tab import WindowClassTab
+
         self.tabs.addTab(AppearanceTab(self.config), "Appearance")
         self.tabs.addTab(DisplayTab(self.config), "Display")
         self.tabs.addTab(StartupAppsTab(self.config), "Startup Apps")
         self.tabs.addTab(KeybindsTab(self.config), "Keybindings")
+        self.tabs.addTab(WindowClassTab(self.config), "Window Class")
         self.tabs.addTab(HistoryTab(self.history, self.config), "History")
         
         layout.addWidget(self.tabs)

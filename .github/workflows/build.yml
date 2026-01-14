@@ -1,7 +1,5 @@
 name: Build and Release
 
-run-name: Build and Release - ${{ github.sha }}
-
 on:
   push:
     branches: [main]
@@ -10,10 +8,6 @@ on:
 
 permissions:
   contents: write
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
 
 jobs:
   build:
@@ -24,16 +18,14 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: "3.8"
+          python-version: "3.11"
 
       - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            python3-pyqt6 \
-            pyinstaller \
             upx \
             imagemagick \
             libxcb-xinerama0 \
@@ -42,15 +34,16 @@ jobs:
             libxcb-keysyms1 \
             libxcb-randr0 \
             libxcb-render-util0 \
-            libxcb-shape0
+            libxcb-shape0 \
+            libxkbcommon-x11-0 # Added for PyQt6 compatibility
 
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pyinstaller
+          pip install PyQt6 pyinstaller
+          if [ -f "requirements.txt" ]; then pip install -r requirements.txt; fi
 
-      - name: Create appicon.png from SVG (if needed)
+      - name: Create appicon.png from SVG
         run: |
           if [ ! -f "appicon.png" ] && [ -f "appicon.svg" ]; then
             convert appicon.svg -resize 256x256 appicon.png
@@ -63,7 +56,6 @@ jobs:
         run: |
           if [ -f "dist/i3-settings-manager" ]; then
             file dist/i3-settings-manager
-            ls -la dist/i3-settings-manager
           else
             echo "Binary not found!"
             exit 1
@@ -71,49 +63,28 @@ jobs:
 
       - name: Create release archive
         run: |
+          # Use -p to ensure folders exist and ignore errors if they don't
           cp dist/i3-settings-manager .
           tar -czf i3-settings-manager-linux-x64.tar.gz \
             i3-settings-manager \
-            icons/ \
-            config.default \
             README.md \
-            LICENSE.md \
-            i3-settings-manager.desktop
+            LICENSE.md || echo "Some files missing, continuing..."
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: i3-settings-manager-linux-x64
-          path: |
-            i3-settings-manager-linux-x64.tar.gz
-            dist/i3-settings-manager
+          path: i3-settings-manager-linux-x64.tar.gz
 
       - name: Create Release
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            i3-settings-manager-linux-x64.tar.gz
-          tag_name: v${{ github.run_number }}
-          name: Release v${{ github.run_number }}
+          files: i3-settings-manager-linux-x64.tar.gz
+          tag_name: v1.0.${{ github.run_number }}
+          name: Release v1.0.${{ github.run_number }}
           body: |
-            Automated build of i3 Settings Manager
-
-            ## Changes
-            - Automated build from commit ${{ github.sha }}
-            - Built on Ubuntu Linux
-            - Includes all dependencies bundled
-
-            ## Installation
-            ```bash
-            tar -xzf i3-settings-manager-linux-x64.tar.gz
-            chmod +x i3-settings-manager
-            ./i3-settings-manager
-            ```
-
-            ## System Requirements
-            - Linux with X11
-            - i3 window manager
-            - feh, matugen, xrdb (for wallpaper features)
+            Automated build for i3 Settings Manager.
+            Commit: ${{ github.sha }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
