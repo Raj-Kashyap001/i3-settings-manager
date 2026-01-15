@@ -1,7 +1,8 @@
 <!DOCTYPE RCC>
 <RCC version="1.0">
-<qresource>
+  <qresource>
     <file>appicon.png</file>
     <file>i3wm-logo.png</file>
-</qresource>
+    <file>style.qss</file>
+  </qresource>
 </RCC>

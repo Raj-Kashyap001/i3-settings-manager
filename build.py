@@ -41,12 +41,6 @@ def check_dependencies():
         print("✗ PyInstaller not found")
         exit(1)
 
-    # Check for PyQt6 tools
-    pyrcc_available = shutil.which("pyrcc6") is not None
-    if pyrcc_available:
-        print("✓ pyrcc6 found (resource compilation enabled)")
-    else:
-        print("⚠ pyrcc6 not found (resource compilation disabled)")
 
     # Check for UPX (optional, for compression)
     upx_available = shutil.which("upx") is not None
@@ -104,7 +98,6 @@ a = Analysis(
     pathex=[project_root],
     binaries=[],
     datas=[
-        ('icons', '.'),
         ('config.default', '.'),
         ('appicon.png', '.'),
         ('i3wm-logo.png', '.'),
