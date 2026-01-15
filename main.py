@@ -11,7 +11,6 @@ def main():
     import signal
     import threading
 
-    # Flag to indicate if SIGINT was received
     sigint_received = threading.Event()
 
     def signal_handler(signum, frame):
@@ -22,13 +21,18 @@ def main():
 
     app = QApplication(sys.argv)
 
-    # Set application style - avoid invalid styles
     try:
         app.setStyle('Fusion')
     except:
-        pass  # Use default style if Fusion is not available
+        pass  
 
-    # Set up timer to check for Ctrl+C
+    try:
+        with open('style.qss', 'r') as f:
+            stylesheet = f.read()
+        app.setStyleSheet(stylesheet)
+    except Exception as e:
+        print(f"Failed to load stylesheet: {e}")
+
     from PyQt6.QtCore import QTimer
 
     def check_signals():

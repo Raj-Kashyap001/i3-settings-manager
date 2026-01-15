@@ -94,7 +94,8 @@ class StartupAppsTab(QWidget):
         action_layout.setContentsMargins(4, 2, 4, 2)
 
         edit_btn = QPushButton()
-        edit_btn.setIcon(QIcon("icons/edit-symbolic.svg"))
+        edit_btn.setIcon(QIcon.fromTheme("document-edit",
+                         self.style().standardIcon(self.style().StandardPixmap.SP_DialogResetButton)))
         edit_btn.setToolTip("Edit startup command")
         edit_btn.clicked.connect(lambda: self.edit_startup_command(row))
         action_layout.addWidget(edit_btn)

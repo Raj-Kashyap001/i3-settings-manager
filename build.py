@@ -41,6 +41,13 @@ def check_dependencies():
         print("✗ PyInstaller not found")
         exit(1)
 
+    # Check for PyQt6 tools
+    pyrcc_available = shutil.which("pyrcc6") is not None
+    if pyrcc_available:
+        print("✓ pyrcc6 found (resource compilation enabled)")
+    else:
+        print("⚠ pyrcc6 not found (resource compilation disabled)")
+
     # Check for UPX (optional, for compression)
     upx_available = shutil.which("upx") is not None
     if upx_available:
@@ -48,7 +55,7 @@ def check_dependencies():
     else:
         print("⚠ UPX not found (compression disabled)")
 
-    return upx_available
+    return pyrcc_available, upx_available
 
 def clean_build_artifacts():
     """Clean previous build artifacts"""
@@ -66,6 +73,21 @@ def clean_build_artifacts():
             pycache_path = os.path.join(root, "__pycache__")
             shutil.rmtree(pycache_path)
             print(f"✓ Removed {pycache_path}/")
+
+    # Clean compiled resources
+    if os.path.exists("resources_rc.py"):
+        os.remove("resources_rc.py")
+        print("✓ Removed resources_rc.py")
+
+def compile_resources():
+    """Compile Qt resources"""
+    print("Compiling Qt resources...")
+
+    if os.path.exists("resources.qrc"):
+        run_command(["pyrcc6", "resources.qrc", "-o", "resources_rc.py"], "Compiling resources.qrc")
+        print("✓ Resources compiled to resources_rc.py")
+    else:
+        print("⚠ resources.qrc not found, skipping resource compilation")
 
 def create_spec_file():
     """Create a custom PyInstaller spec file for optimization"""
@@ -86,6 +108,7 @@ a = Analysis(
         ('config.default', '.'),
         ('appicon.png', '.'),
         ('i3wm-logo.png', '.'),
+        ('style.qss', '.'),
     ],
     hiddenimports=[
         'PyQt6.QtCore',
@@ -382,10 +405,14 @@ Examples:
             sys.exit(1)
 
         # Check dependencies
-        upx_available = check_dependencies()
+        pyrcc_available, upx_available = check_dependencies()
 
         # Clean previous builds
         clean_build_artifacts()
+
+        # Compile resources if available
+        if pyrcc_available:
+            compile_resources()
 
         # Create optimized spec file
         create_spec_file()
@@ -410,10 +437,14 @@ Examples:
         sys.exit(1)
 
     # Check dependencies
-    upx_available = check_dependencies()
+    pyrcc_available, upx_available = check_dependencies()
 
     # Clean previous builds
     clean_build_artifacts()
+
+    # Compile resources if available
+    if pyrcc_available:
+        compile_resources()
 
     # Create optimized spec file
     create_spec_file()

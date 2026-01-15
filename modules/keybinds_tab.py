@@ -73,13 +73,15 @@ class KeybindsTab(QWidget):
         action_layout.setContentsMargins(4, 2, 4, 2)
 
         edit_btn = QPushButton()
-        edit_btn.setIcon(QIcon("icons/edit-symbolic.svg"))
+        edit_btn.setIcon(QIcon.fromTheme("document-edit",
+                         self.style().standardIcon(self.style().StandardPixmap.SP_DialogResetButton)))
         edit_btn.setToolTip("Edit keybind")
         edit_btn.clicked.connect(lambda: self.edit_keybind(bind))
         action_layout.addWidget(edit_btn)
 
         delete_btn = QPushButton()
-        delete_btn.setIcon(QIcon("icons/edit-delete-symbolic.svg"))
+        delete_btn.setIcon(QIcon.fromTheme("list-remove",
+                         self.style().standardIcon(self.style().StandardPixmap.SP_TrashIcon)))
         delete_btn.setToolTip("Delete keybind")
         delete_btn.clicked.connect(lambda: self.delete_keybind(bind))
         action_layout.addWidget(delete_btn)

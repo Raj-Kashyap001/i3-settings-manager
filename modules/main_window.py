@@ -19,10 +19,14 @@ class MainWindow(QMainWindow):
         from modules.history_manager import HistoryManager
         self.config = I3ConfigParser(self.config_path)
         self.history = HistoryManager(self.config_path)
-         
+
+        # Set theme (default to dark for now)
+        self.current_theme = "dark"
+        self.setObjectName("dark")
+
         self.setWindowTitle("i3 Settings Manager")
         self.setMinimumSize(900, 700)
-         
+
         # Set application icon
         self.set_window_icon()
         
@@ -135,8 +139,9 @@ class MainWindow(QMainWindow):
         edit_config_btn.clicked.connect(self.edit_config)
         footer_layout.addWidget(edit_config_btn)
         
+
         footer_layout.addStretch()
-        
+
         about_btn = QPushButton("About")
         about_btn.clicked.connect(self.show_about)
         footer_layout.addWidget(about_btn)
@@ -256,7 +261,7 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout()
 
         # Title
-        title = QLabel("i3 Settings Manager v1.0")
+        title = QLabel("i3 Settings Manager v1.1")
         title.setStyleSheet("font-size: 16px; font-weight: bold;")
         layout.addWidget(title)
 
@@ -367,6 +372,22 @@ class MainWindow(QMainWindow):
         
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to save config: {str(e)}")
+
+    def switch_theme(self):
+        """Switch between light and dark themes"""
+        if self.current_theme == "light":
+            self.current_theme = "dark"
+            self.setObjectName("dark")
+            self.sender().setText("🌙 Dark")
+        else:
+            self.current_theme = "light"
+            self.setObjectName("light")
+            self.sender().setText("☀️ Light")
+
+        # Force stylesheet reapplication
+        self.style().unpolish(self)
+        self.style().polish(self)
+        self.update()
 
 
 def send_notification(title, message):
