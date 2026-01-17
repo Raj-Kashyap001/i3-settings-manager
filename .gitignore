@@ -30,5 +30,8 @@ Thumbs.db
 i3-settings-manager
 i3-settings-manager.desktop
 
-# User config (don't commit personal configs)
+# User config 
 config.default
+
+# resource generated
+resources_rc.py

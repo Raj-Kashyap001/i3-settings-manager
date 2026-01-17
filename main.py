@@ -21,17 +21,13 @@ def main():
 
     app = QApplication(sys.argv)
 
+    # Try to use system native style
     try:
-        app.setStyle('Fusion')
+        # For Qt 6.3+, this will use the system theme
+        from PyQt6.QtCore import Qt
+        app.setStyle('Fusion')  # Fallback to Fusion if system style not available
     except:
-        pass  
-
-    try:
-        with open('style.qss', 'r') as f:
-            stylesheet = f.read()
-        app.setStyleSheet(stylesheet)
-    except Exception as e:
-        print(f"Failed to load stylesheet: {e}")
+        pass
 
     from PyQt6.QtCore import QTimer
 

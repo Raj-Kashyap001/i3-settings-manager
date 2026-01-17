@@ -49,6 +49,13 @@ def check_dependencies():
     else:
         print("⚠ UPX not found (compression disabled)")
 
+    # Check for rcc or pyrcc6
+    pyrcc_available = shutil.which("rcc") is not None or shutil.which("pyrcc6") is not None
+    if pyrcc_available:
+        print("✓ Resource compiler found")
+    else:
+        print("⚠ Resource compiler not found")
+
     return pyrcc_available, upx_available
 
 def clean_build_artifacts():
@@ -78,7 +85,24 @@ def compile_resources():
     print("Compiling Qt resources...")
 
     if os.path.exists("resources.qrc"):
-        run_command(["pyrcc6", "resources.qrc", "-o", "resources_rc.py"], "Compiling resources.qrc")
+        # Try using rcc (Qt's official tool) first
+        if shutil.which("rcc") is not None:
+            # Use rcc with Python output format and fix import
+            result = run_command(["rcc", "-g", "python", "resources.qrc"], "Compiling resources.qrc with rcc")
+            with open("resources_rc.py", "w") as f:
+                f.write(result.stdout.replace("PySide6", "PyQt6"))
+        elif shutil.which("pyside6-rcc") is not None:
+            # Fallback to pyside6-rcc
+            result = run_command(["pyside6-rcc", "resources.qrc"], "Compiling resources.qrc with pyside6-rcc")
+            with open("resources_rc.py", "w") as f:
+                f.write(result.stdout.replace("PySide6", "PyQt6"))
+        elif shutil.which("pyrcc6") is not None:
+            # Last fallback to pyrcc6
+            run_command(["pyrcc6", "resources.qrc", "-o", "resources_rc.py"], "Compiling resources.qrc with pyrcc6")
+        else:
+            print("⚠ No resource compiler found, skipping resource compilation")
+            return
+        
         print("✓ Resources compiled to resources_rc.py")
     else:
         print("⚠ resources.qrc not found, skipping resource compilation")
@@ -101,7 +125,6 @@ a = Analysis(
         ('config.default', '.'),
         ('appicon.png', '.'),
         ('i3wm-logo.png', '.'),
-        ('style.qss', '.'),
     ],
     hiddenimports=[
         'PyQt6.QtCore',

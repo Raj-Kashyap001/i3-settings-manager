@@ -115,8 +115,10 @@ class MainWindow(QMainWindow):
         from modules.keybinds_tab import KeybindsTab
         from modules.history_tab import HistoryTab
         from modules.window_class_tab import WindowClassTab
+        from modules.picom_tab import PicomTab
 
         self.tabs.addTab(AppearanceTab(self.config), "Appearance")
+        self.tabs.addTab(PicomTab(self.config), "Compositor(picom)")
         self.tabs.addTab(DisplayTab(self.config), "Display")
         self.tabs.addTab(StartupAppsTab(self.config), "Startup Apps")
         self.tabs.addTab(KeybindsTab(self.config), "Keybindings")
@@ -261,7 +263,7 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout()
 
         # Title
-        title = QLabel("i3 Settings Manager v1.1")
+        title = QLabel("i3 Settings Manager v1.2")
         title.setStyleSheet("font-size: 16px; font-weight: bold;")
         layout.addWidget(title)
 
