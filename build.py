@@ -368,7 +368,6 @@ def create_archive():
         run_command([
             "tar", "-czf", archive_path,
             "i3-settings-manager",
-            "icons",
             "config.default",
             "README.md",
             "LICENSE.md",
