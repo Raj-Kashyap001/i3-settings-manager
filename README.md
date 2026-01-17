@@ -10,11 +10,11 @@ A modern GUI application for managing i3 window manager configuration with an in
 - **Wallpaper Management** - Set wallpapers and random wallpaper support
 - **Monitor Control** - Configure display refresh rates
 - **Startup Applications** - Manage exec commands and startup applications
-- **Live Preview** - See changes before applying them
+- **Compositor Settings** - picom config support
 
 ## Screenshots
 
-_Add screenshots here_
+![i3wm-settings-manager](./screenshot.png)
 
 ## Requirements
 
