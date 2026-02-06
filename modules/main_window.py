@@ -115,10 +115,8 @@ class MainWindow(QMainWindow):
         from modules.keybinds_tab import KeybindsTab
         from modules.history_tab import HistoryTab
         from modules.window_class_tab import WindowClassTab
-        from modules.picom_tab import PicomTab
 
         self.tabs.addTab(AppearanceTab(self.config), "Appearance")
-        self.tabs.addTab(PicomTab(self.config), "Compositor(picom)")
         self.tabs.addTab(DisplayTab(self.config), "Display")
         self.tabs.addTab(StartupAppsTab(self.config), "Startup Apps")
         self.tabs.addTab(KeybindsTab(self.config), "Keybindings")
